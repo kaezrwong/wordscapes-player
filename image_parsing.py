@@ -11,6 +11,9 @@ botRightX = 2644
 botRightY = 1716
 image = pag.screenshot("screenshot.png", region=(topLeftX, topLeftY, botRightX-topLeftX, botRightY-topLeftY))
 
+# Next level button/centre of circle containing letters
+nextLevelXY = (2236, 1444)
+
 from PIL import Image 
 image_file = Image.open("screenshot.png") # open colour image
 image_file = image_file.convert('1') # convert image to black and white
@@ -111,6 +114,10 @@ for word in anagrams:
                 time.sleep(0.1)
     pag.mouseUp()
     time.sleep(1)
+
+time.sleep(12)
+# Press next level button
+pag.click(nextLevelXY)
 
 
 '''
