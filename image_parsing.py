@@ -2,6 +2,7 @@ import pyautogui as pag
 import time
 
 import whiteLettersToBlack
+import scrabbleSolver
 
 time.sleep(2)
 topLeftX = 1823
@@ -16,7 +17,7 @@ image_file = image_file.convert('1') # convert image to black and white
 image_file.save('bw.png')
 
 # Tolerance level for checkPos function
-checkPosTolerance = 20
+checkPosTolerance = 50
 
 # pag.locateAll returns multiple points for each image
 # checkpos checks if the centres of these points belong 
@@ -30,24 +31,36 @@ def checkPos(pos1, pos2):
     else:
         return True
 
+def checkPosLoop(pos, posList):
+    for i in range(len(posList)):
+        if not checkPos(pos, posList[i-1]):
+            return False
+    return True
+
 # Read in letters
 #posA = pag.locateOnScreen('Letters/A.png', region=(1823, 1165, 2644-1823, 1716-1165))
-listOfLetters = ['A','B','C','D','E','G','H','I','K','L','M','N','O','P','R','S','T','U','V','W','Y']
+listOfLetters = ['A','B','D','E','H','K','L','M','N','O','P','R','S','T','U','V','W','Y','I','C','G']
 boardLetters = ""
+letterPositions = []
+
 
 for letter in listOfLetters:
     oldPos = None
-    for posA in pag.locateAll('Letters/{}.png'.format(letter), "black_and_white.png", grayscale=True, confidence=0.9):
+    for posA in pag.locateAll('Letters/{}.png'.format(letter), "screenshot.png", grayscale=True, confidence=0.9):
         posA = pag.center(posA)
         if oldPos == None:
             oldPos = posA
             pag.click((posA[0]+topLeftX),(posA[1]+topLeftY))
-            boardLetters += letter
+            if checkPosLoop(posA, letterPositions):
+                boardLetters += letter
+                letterPositions.append(posA)
 
         elif checkPos(oldPos, posA):
             oldPos = posA
             pag.click((posA[0]+topLeftX),(posA[1]+topLeftY))
-            boardLetters += letter
+            if checkPosLoop(posA, letterPositions):
+                boardLetters += letter
+                letterPositions.append(posA)
 
     #time.sleep(0.2)
 
@@ -60,17 +73,45 @@ if len(boardLetters) == 0:
             posA = pag.center(posA)
             if oldPos == None:
                 oldPos = posA
-                pag.click((posA[0]+topLeftX),(posA[1]+topLeftY))
-                boardLetters += letter
+                #pag.click((posA[0]+topLeftX),(posA[1]+topLeftY))
+                if checkPosLoop(posA, letterPositions):
+                    letterPositions.append(posA)
+                    boardLetters += letter
 
             elif checkPos(oldPos, posA):
                 oldPos = posA
-                pag.click((posA[0]+topLeftX),(posA[1]+topLeftY))
-                boardLetters += letter
+                #pag.click((posA[0]+topLeftX),(posA[1]+topLeftY))
+                if checkPosLoop(posA, letterPositions):
+                    letterPositions.append(posA)
+                    boardLetters += letter
 
         #time.sleep(0.2)
 
+boardLetters = boardLetters.lower()
 print(boardLetters)
+print(letterPositions)
+
+anagrams = scrabbleSolver.solve(boardLetters.lower())
+boardLettersList = list(boardLetters)
+for word in anagrams:
+    temp = list.copy(boardLettersList)
+    print("New word is: ", word, " and temp is reset to ", temp, "boardletterslist is ", boardLettersList)
+    isMouseDown = False   
+    for i in range(len(word)):
+        for j in range(len(temp)):
+            #print(word[i], temp[j])
+            if word[i] == temp[j]:
+                #print('Above was compared')
+                posB = letterPositions[j]
+                pag.moveTo((posB[0] + topLeftX), (posB[1] + topLeftY))
+                if not isMouseDown:
+                    pag.mouseDown()
+                temp[j] = '0'
+                break
+                time.sleep(0.1)
+    pag.mouseUp()
+    time.sleep(1)
+
 
 '''
 # Drag cursor to create word
