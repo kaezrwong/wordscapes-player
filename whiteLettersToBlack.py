@@ -10,7 +10,7 @@ def whiteLettersToBlack(fileIn, fileOut):
     w, h = im.size
 
     # Convert non-black pixels to white
-    threshold = 180
+    threshold = 200
     for i in range(w):
         for j in range(h):
             if(r[i, j] > threshold and g[i, j] > threshold and b[i, j] > threshold):
