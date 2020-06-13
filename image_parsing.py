@@ -1,17 +1,24 @@
 import pyautogui as pag
 import time
+import pytesseract
+import cv2
+from PIL import Image
+import PIL.ImageOps  
 
 import whiteLettersToBlack
 import scrabbleSolver
 
 time.sleep(2)
-topLeftX = 1823
-topLeftY = 1165
-botRightX = 2644
-botRightY = 1716
+topLeftX = 2323
+topLeftY = 1134
+botRightX = 2841
+botRightY = 1642
 
 # Next level button/centre of circle containing letters
-nextLevelXY = (2236, 1444)
+nextLevelXY = (2598, 1395)
+
+# Rearrange letter button
+rearrangeButton = (2245, 1109)
 
 # Tolerance level for checkPos function
 checkPosTolerance = 50
@@ -39,93 +46,163 @@ def checkPosLoop(pos, posList):
             return False
     return True
 
-for i in range(10):
-    # Screenshot of ROI
-    image = pag.screenshot("screenshot.png", region=(topLeftX, topLeftY, botRightX-topLeftX, botRightY-topLeftY))
+# Invert image to always be black
+def convertLettersToBlack(imageName):
+    img = Image.open(imageName)
+    _img = img.load()
+    row = img.size[0]/2
+    col = img.size[1]/2
+    if ((int(_img[row,col][0]) < 240) and (int(_img[row,col][1]) < 240) and (int(_img[row,col][2]) < 240) ):
+        inverted_image = PIL.ImageOps.invert(img)
+        inverted_image.save(imageName)
 
-    # Read in letters
-    #posA = pag.locateOnScreen('Letters/A.png', region=(1823, 1165, 2644-1823, 1716-1165))
-    #listOfLetters = ['A','B','D','E','H','K','L','M','N','O','P','R','S','T','U','V','W','Y','I','C','G','X','F','T2','F2','E2','R2','I2']
-    listOfLetters = ['X','B','K','N','Y','M','A','L','V','S','D','E','U','J','F','G','R','H','T','W','Q','O','I','C','P']
-    boardLetters = ""
-    letterPositions = []
+solvedPuzzles = 0
 
-    whiteLettersToBlack.blackLettersToWhite("screenshot.png", "white_letters.png")
-    for letter in listOfLetters:
-        oldPos = None
-        for posA in pag.locateAll('Letters{}/{}.png'.format(stage, letter), "white_letters.png", grayscale=True, confidence=0.89):
-            posA = pag.center(posA)
-            if oldPos == None:
-                oldPos = posA
-                pag.click((posA[0]+topLeftX),(posA[1]+topLeftY))
-                if checkPosLoop(posA, letterPositions):
-                    boardLetters += letter[0]
-                    letterPositions.append(posA)
+for i in range(4):
+    for i in range(16):
+        letters = ""
+        while (len(letters) < 6):
+            letters = ""
+            print("Starting loop")
+            # Screenshot of ROI
+            time.sleep(1) # Allow time for screenshot to load
+            image = pag.screenshot("screenshot.png", region=(topLeftX, topLeftY, botRightX-topLeftX, botRightY-topLeftY))
+            
+            # Read in letters
+            #posA = pag.locateOnScreen('Letters/A.png', region=(1823, 1165, 2644-1823, 1716-1165))
+            #listOfLetters = ['A','B','D','E','H','K','L','M','N','O','P','R','S','T','U','V','W','Y','I','C','G','X','F','T2','F2','E2','R2','I2']
+            #listOfLetters = ['X','B','K','N','Y','M','A','L','V','S','D','E','U','J','F','G','R','H','T','W','Q','O','I','C','P']
+            boardLetters = ""
+            letterPositions = []
 
-            elif checkPos(oldPos, posA):
-                oldPos = posA
-                pag.click((posA[0]+topLeftX),(posA[1]+topLeftY))
-                if checkPosLoop(posA, letterPositions):
-                    boardLetters += letter[0]
-                    letterPositions.append(posA)
+            whiteLettersToBlack.blackLettersToWhite("screenshot.png", "white_letters.png")
 
-        #time.sleep(0.2)
-    print("Board letters are: ", boardLetters)
-    if len(boardLetters) == 0:
-        whiteLettersToBlack.whiteLettersToBlack("screenshot.png", "black_and_white.png")
-        print("Using black_and_white.png")
+            convertLettersToBlack("white_letters.png")
 
-        for letter in listOfLetters:
-            oldPos = None
-            for posA in pag.locateAll('Letters/{}.png'.format(stage, letter), "black_and_white.png", grayscale=True, confidence=0.89):
-                posA = pag.center(posA)
-                if oldPos == None:
-                    oldPos = posA
-                    #pag.click((posA[0]+topLeftX),(posA[1]+topLeftY))
-                    if checkPosLoop(posA, letterPositions):
-                        letterPositions.append(posA)
-                        boardLetters += letter[0]
+            img = cv2.imread('white_letters.png')
 
-                elif checkPos(oldPos, posA):
-                    oldPos = posA
-                    #pag.click((posA[0]+topLeftX),(posA[1]+topLeftY))
-                    if checkPosLoop(posA, letterPositions):
-                        letterPositions.append(posA)
-                        boardLetters += letter[0]
+            resizeFactor = 2
+            img = cv2.resize(img, None, fx=resizeFactor, fy=resizeFactor)
+            img_copy = cv2.resize(img, None, fx=resizeFactor, fy=resizeFactor)
 
-            #time.sleep(0.2)
+            h, w, _ = img.shape
 
-    boardLetters = boardLetters.lower()
-    print(boardLetters)
-    print(letterPositions)
+            letters = pytesseract.image_to_boxes(img)
+            letters = letters.split('\n')
+            letters = [letter.split() for letter in letters]
 
-    anagrams = scrabbleSolver.solve(boardLetters.lower())
-    boardLettersList = list(boardLetters)
-    for word in anagrams:
-        temp = list.copy(boardLettersList)
-        print("New word is: ", word, " and temp is reset to ", temp, "boardletterslist is ", boardLettersList)
-        isMouseDown = False   
-        for i in range(len(word)):
-            for j in range(len(temp)):
-                #print(word[i], temp[j])
-                if word[i] == temp[j]:
-                    #print('Above was compared')
-                    posB = letterPositions[j]
-                    pag.moveTo((posB[0] + topLeftX), (posB[1] + topLeftY))
-                    if not isMouseDown:
-                        pag.mouseDown()
-                    temp[j] = '0'
-                    break
-                    time.sleep(0.1)
-        pag.mouseUp()
-        time.sleep(1)
+            for i, letter in enumerate(letters):
+                cv2.rectangle(img, (int(letter[1]), h - int(letter[2])), (int(letter[3]), h - int(letter[4])), (0,0,255), 1)
 
-    time.sleep(12)
-    # Press next level button
-    pag.click(nextLevelXY)
+            cv2.imwrite('output.png', img)
 
-    # Allow time for next level to load
-    time.sleep(2)
+            #input()
+
+            edged = cv2.Canny(img, 175, 200)
+
+            contours, hierarchy = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            #cv2.drawContours(img, contours, -1, (0,255,0), 3)
+
+            #cv2.imshow("Show contour", img)
+            #cv2.waitKey(0)
+            #cv2.destroyAllWindows()
+
+            letter_index = []
+            letter_locations = []
+
+            for i,c in enumerate(contours):
+                rect = cv2.boundingRect(c)
+                x,y,w,h = rect
+
+                #box = cv2.rectangle(img, (x,y), (x+w,y+h), (0,0,255), 2)
+                cropped = img[y: y+h, x: x+w]
+                if (w < 300 and h > 150 and h < 350):
+                    cv2.imwrite("blobby"+str(i)+".png", cropped)
+                    letter_locations.append(x+w/2)
+                    letter_locations.append(y+h/2)
+                    #print("Blobby "+str(i) + " has size: "+ str(w) + "x" + str(h))
+                    #print(pytesseract.image_to_string(cropped, lang='eng', config='--psm 10'))
+                    
+                    # Add border and read
+                    originalImage = cv2.imread('blobby'+str(i)+'.png')
+                    grayImage = cv2.cvtColor(originalImage, cv2.COLOR_BGR2GRAY)
+                    (thresh, blackAndWhiteImage) = cv2.threshold(grayImage, 127, 255, cv2.THRESH_BINARY)
+                    cv2.imwrite('contour_removed.png', blackAndWhiteImage)
+
+                    old_im = Image.open('contour_removed.png')
+                    old_size = old_im.size
+
+                    new_size = (180, 350)
+                    new_im = Image.new("RGB", new_size)   ## luckily, this is already black!
+                    new_im = PIL.ImageOps.invert(new_im)
+                    new_im.paste(old_im, ((new_size[0]-old_size[0])//2, (new_size[1]-old_size[1])//2))
+                    new_im
+                    new_im.save("bordered"+str(i)+".png")
+                    letter_index.append(i)
+                    #print(pytesseract.image_to_string("bordered.png", lang='eng', config='--psm 10'))
+                    #input()
+
+            im1 = cv2.imread("bordered"+str(letter_index[0])+".png")
+            im2 = cv2.imread("bordered"+str(letter_index[1])+".png")
+            im_h = cv2.hconcat([im1, im2])
+            letter_index.pop(0)
+            letter_index.pop(0)
+            for i in letter_index:
+                im = cv2.imread("bordered"+str(i)+".png")
+                im_h = cv2.hconcat([im_h, im])
+
+            letter_index.clear()
+
+            cv2.imwrite("concatenated.png", im_h)
+
+            letters = pytesseract.image_to_string("concatenated.png", lang='eng', config="-c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ --psm 7")
+            if len(letters) < 6:
+                pag.click(rearrangeButton)
+                print("Rearranging letters")
+                letter_index.clear()
+                letter_locations.clear()
+
+        for i in letters:
+            if (i != ' '):
+                boardLetters += i
+        
+        boardLetters = boardLetters.lower()
+        print(boardLetters)
+        print(letter_locations)
+
+        anagrams = scrabbleSolver.solve(boardLetters.lower())
+        boardLettersList = list(boardLetters)
+        for word in anagrams:
+            temp = list.copy(boardLettersList)
+            print("New word is: ", word, ".", sep='')
+            isMouseDown = False   
+            for i in range(len(word)):
+                for j in range(len(temp)):
+                    #print(word[i], temp[j])
+                    if word[i] == temp[j]:
+                        #print('Above was compared')
+                        posA = int(letter_locations[2*j]/2)
+                        posB = int(letter_locations[2*j+1]/2)
+                        pag.moveTo((posA + topLeftX), (posB + topLeftY))
+                        if not isMouseDown:
+                            pag.mouseDown()
+                        temp[j] = '0'
+                        break
+                        time.sleep(0.1)
+            pag.mouseUp()
+            time.sleep(1)
+
+        print("Number of solved puzzles this session: ", solvedPuzzles)
+        time.sleep(11 + len(anagrams)/5)
+        # Press next level button
+        pag.click(nextLevelXY)
+
+        # Allow time for next level to load
+        time.sleep(2)
+        solvedPuzzles += 1
+        
+
+    time.sleep(9)
 
 
 '''

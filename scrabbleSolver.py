@@ -13,7 +13,7 @@ def canSpell(letters, word):
 
 def solve(letters):
     result = []
-    with open('engmix.txt', 'r') as dictionary:
+    with open('twl06.txt', 'r') as dictionary:
         for line in dictionary:
             word = line.strip()
             if len(word) < minWordLength:
