@@ -13,9 +13,9 @@ def convertLettersToBlack(imageName):
         inverted_image = PIL.ImageOps.invert(img)
         inverted_image.save(imageName)
 
-convertLettersToBlack("test6.png")
+convertLettersToBlack("white_letters.png")
 
-img = cv2.imread('test6.png')
+img = cv2.imread('white_letters.png')
 
 resizeFactor = 2
 img = cv2.resize(img, None, fx=resizeFactor, fy=resizeFactor)
@@ -37,11 +37,11 @@ cv2.imwrite('output.png', img)
 edged = cv2.Canny(img, 175, 200)
 
 contours, hierarchy = cv2.findContours(edged, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-#cv2.drawContours(img, contours, -1, (0,255,0), 3)
+cv2.drawContours(img, contours, -1, (0,255,0), 3)
 
-#cv2.imshow("Show contour", img)
-#cv2.waitKey(0)
-#cv2.destroyAllWindows()
+cv2.imshow("Show contour", img)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
 
 letter_index = []
 letter_locations = []
@@ -52,7 +52,7 @@ for i,c in enumerate(contours):
 
     #box = cv2.rectangle(img, (x,y), (x+w,y+h), (0,0,255), 2)
     cropped = img[y: y+h, x: x+w]
-    if (w < 300 and h > 250 and h < 350):
+    if (w < 300 and h > 150 and h < 350):
         cv2.imwrite("blobby"+str(i)+".png", cropped)
         letter_locations.append(x+w/2)
         letter_locations.append(y+h/2)
@@ -68,7 +68,7 @@ for i,c in enumerate(contours):
         old_im = Image.open('contour_removed.png')
         old_size = old_im.size
 
-        new_size = (600, 600)
+        new_size = (180, 350)
         new_im = Image.new("RGB", new_size)   ## luckily, this is already black!
         new_im = PIL.ImageOps.invert(new_im)
         new_im.paste(old_im, ((new_size[0]-old_size[0])//2, (new_size[1]-old_size[1])//2))
@@ -91,6 +91,6 @@ letter_index.clear()
 
 cv2.imwrite("concatenated.png", im_h)
 
-letters = pytesseract.image_to_string("concatenated.png", lang='eng', config='--psm 7')
+letters = pytesseract.image_to_string("concatenated.png", lang='eng', config="-c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ --psm 6")
 print(letters)
 print(letter_locations)
