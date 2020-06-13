@@ -191,7 +191,8 @@ for i in range(4):
                         time.sleep(0.1)
             pag.mouseUp()
             time.sleep(1)
-
+            
+        solvedPuzzles += 1
         print("Number of solved puzzles this session: ", solvedPuzzles)
         time.sleep(11 + len(anagrams)/5)
         # Press next level button
@@ -199,7 +200,7 @@ for i in range(4):
 
         # Allow time for next level to load
         time.sleep(2)
-        solvedPuzzles += 1
+        
         
 
     time.sleep(9)
